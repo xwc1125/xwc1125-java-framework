@@ -1,0 +1,41 @@
+{
+  "groups": [
+    {
+      "name": "xwc1125.uuid",
+      "type": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "xwc1125.uuid.datacenter-id",
+      "type": "java.lang.Long",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "xwc1125.uuid.id-worker",
+      "type": "com.xwc1125.common.util.uuid",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties"
+    },
+    {
+      "name": "xwc1125.uuid.idepoch",
+      "type": "java.lang.Long",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties",
+      "defaultValue": 1344322705519
+    },
+    {
+      "name": "xwc1125.uuid.sequence",
+      "type": "java.lang.Long",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "xwc1125.uuid.worker-id",
+      "type": "java.lang.Long",
+      "sourceType": "com.xwc1125.framework.autoconfigure.uuid.UuidProperties",
+      "defaultValue": 0
+    }
+  ],
+  "hints": []
+}

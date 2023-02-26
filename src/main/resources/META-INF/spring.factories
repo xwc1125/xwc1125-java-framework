@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.xwc1125.framework.autoconfigure.uuid.UuidAutoConfiguration
+xwc1125.uuid.workerId=
+xwc1125.uuid.datacenterId=
+xwc1125.uuid.sequence=
+xwc1125.uuid.idepoch=
