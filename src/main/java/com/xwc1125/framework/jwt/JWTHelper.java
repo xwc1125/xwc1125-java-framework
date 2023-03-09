@@ -3,16 +3,17 @@ package com.xwc1125.framework.jwt;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTCreator.Builder;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwc1125.common.crypto.rsa.RSAUtils;
 import com.xwc1125.common.entity.AppInfo;
 import com.xwc1125.common.entity.CoreDataInfo;
 import com.xwc1125.common.entity.DataInfo;
 import com.xwc1125.common.entity.DeviceInfo;
 import com.xwc1125.common.entity.RequestDataObj;
 import com.xwc1125.common.util.date.DateUtils;
-import com.xwc1125.common.crypto.rsa.RSAUtils;
+import com.xwc1125.common.util.json.JSON;
 import com.xwc1125.common.util.string.StringUtils;
 import java.util.Date;
 import javax.crypto.SecretKey;
@@ -31,8 +32,6 @@ import org.springframework.data.redis.core.RedisTemplate;
  */
 @Slf4j
 public class JWTHelper {
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static String generateToken(IJWTInfo jwtInfo, String base64PriKey, long expire) throws JWTException {
         byte[] bytes = getBytes(base64PriKey);
@@ -65,16 +64,22 @@ public class JWTHelper {
         long nowMillis = System.currentTimeMillis();
         Date now = new Date(nowMillis);
         //生成令牌
-        Builder jwtBuilder = JWT.create().withClaim(JWTConstants.JWT_KEY_USER_ID, jwtInfo.getUserId())
-                .withClaim(JWTConstants.JWT_KEY_USER_NAME, jwtInfo.getUserName())
-                .withClaim(JWTConstants.JWT_KEY_DATAINFO, jwtInfo.getDataInfo().toCompactString())
-                .withExpiresAt(DateUtils.addSeconds(now, expire)).withJWTId(jwtInfo.getJwtId());
-
+        Builder builder = JWT.create();
+        if (jwtInfo.getUserId() != null) {
+            builder = builder.withClaim(JWTConstants.JWT_KEY_USER_ID, jwtInfo.getUserId());
+        }
+        if (jwtInfo.getUserName() != null) {
+            builder = builder.withClaim(JWTConstants.JWT_KEY_USER_NAME, jwtInfo.getUserName());
+        }
+        if (jwtInfo.getDataInfo() != null) {
+            builder = builder.withClaim(JWTConstants.JWT_KEY_DATAINFO, jwtInfo.getDataInfo());
+        }
+        builder = builder.withExpiresAt(DateUtils.addSeconds(now, expire));
         if (StringUtils.isNotEmpty(jwtInfo.getJwtId())) {
-            jwtBuilder = jwtBuilder.withJWTId(jwtInfo.getJwtId());
+            builder = builder.withJWTId(jwtInfo.getJwtId());
         }
         //设置签名
-        String token = jwtBuilder.sign(Algorithm.HMAC256(new String(priKey)));
+        String token = builder.sign(Algorithm.HMAC256(new String(priKey)));
 
         return token;
     }
@@ -122,19 +127,31 @@ public class JWTHelper {
      * @Author: xwc1125
      * @Date: 2019-04-18 14:52:50
      */
-    public static IJWTInfo getInfoFromToken(String token, byte[] priKey) throws JWTException {
+    public static IJWTInfo parseToken(String token, byte[] priKey) throws JWTException {
         try {
+            JWTInfo jwtInfo = new JWTInfo();
             JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256(new String(priKey))).build();
             DecodedJWT decodedJWT = jwtVerifier.verify(token);
-            DataInfo dataInfo = objectMapper.readValue(decodedJWT.getClaim(JWTConstants.JWT_KEY_DATAINFO).toString(),
-                    DataInfo.class);
-            JWTInfo jwtInfo = new JWTInfo();
+            Claim dataInfoClaim = decodedJWT.getClaim(JWTConstants.JWT_KEY_DATAINFO);
+            if (!dataInfoClaim.isNull()) {
+                String dataInfoStr = StringUtils.getObjectValue(dataInfoClaim);
+                DataInfo dataInfo = JSON.getObjectMapper().readValue(dataInfoStr, DataInfo.class);
+                jwtInfo.setDataInfo(dataInfo);
+            }
+
             jwtInfo.setJwtId(decodedJWT.getId());
-            jwtInfo.setUserId(StringUtils.getObjectValue(decodedJWT.getClaim(JWTConstants.JWT_KEY_USER_ID)));
-            jwtInfo.setUserName(StringUtils.getObjectValue(decodedJWT.getClaim(JWTConstants.JWT_KEY_USER_NAME)));
-            jwtInfo.setDataInfo(dataInfo);
+            Claim userIdClaim = decodedJWT.getClaim(JWTConstants.JWT_KEY_USER_ID);
+            if (!userIdClaim.isNull()) {
+                jwtInfo.setUserId(userIdClaim.asString());
+            }
+            Claim userNameClaim = decodedJWT.getClaim(JWTConstants.JWT_KEY_USER_NAME);
+            if (!userNameClaim.isNull()) {
+                jwtInfo.setUserName(userNameClaim.asString());
+            }
+
             return jwtInfo;
         } catch (Exception e) {
+            log.error(e.getMessage(), e);
             throw new JWTException(JWTConstants.JWT_CODE.ERR_TOKEN_DE);
         }
     }
@@ -149,8 +166,8 @@ public class JWTHelper {
      * @Author: xwc1125
      * @Date: 2019-04-18 15:43:38
      */
-    public static IJWTInfo getInfoFromToken(String token, String base64Key) throws JWTException {
-        return getInfoFromToken(token, getBytes(base64Key));
+    public static IJWTInfo parseToken(String token, String base64Key) throws JWTException {
+        return parseToken(token, getBytes(base64Key));
     }
 
     /**
@@ -164,7 +181,7 @@ public class JWTHelper {
      * @Date: 2019-04-18 16:03:35
      */
     public static String getUserUuid(String token, byte[] priKey) throws JWTException {
-        IJWTInfo ijwtInfo = getInfoFromToken(token, priKey);
+        IJWTInfo ijwtInfo = parseToken(token, priKey);
         return ijwtInfo.getUserId();
     }
 
@@ -179,7 +196,7 @@ public class JWTHelper {
      * @Date: 2019-04-18 16:02:43
      */
     public static String getUserUuid(String token, String base64Key) throws JWTException {
-        IJWTInfo ijwtInfo = getInfoFromToken(token, getBytes(base64Key));
+        IJWTInfo ijwtInfo = parseToken(token, getBytes(base64Key));
         return ijwtInfo.getUserId();
     }
 
@@ -194,7 +211,7 @@ public class JWTHelper {
      * @Author: xwc1125
      * @Date: 2019-04-08 15:15:25
      */
-    public static IJWTInfo getJwtInfo(String token, RequestDataObj dataObj, RedisTemplate redisTemplate)
+    public static IJWTInfo parseToken(String token, RequestDataObj dataObj, RedisTemplate redisTemplate)
             throws JWTException {
         if (priKey == null || priKey.length == 0) {
             try {
@@ -204,20 +221,21 @@ public class JWTHelper {
                 throw new JWTException(JWTConstants.JWT_CODE.ERR_DATA);
             }
         }
-        return getJwtInfo(token, dataObj, priKey);
+        return parseToken(token, dataObj, priKey);
     }
 
-    public static IJWTInfo getJwtInfo(String token, RequestDataObj dataObj, String basePriKey) throws JWTException {
-        return getJwtInfo(token, dataObj, getBytes(basePriKey));
+    public static IJWTInfo parseToken(String token, RequestDataObj dataObj, String basePriKey) throws JWTException {
+        return parseToken(token, dataObj, getBytes(basePriKey));
     }
 
-    public static IJWTInfo getJwtInfo(String token, RequestDataObj dataObj, byte[] priKey) throws JWTException {
+    public static IJWTInfo parseToken(String token, RequestDataObj dataObj, byte[] priKey) throws JWTException {
         DataInfo dataInfo = null;
         IJWTInfo ijwtInfo = null;
         try {
-            ijwtInfo = getInfoFromToken(token, priKey);
+            ijwtInfo = parseToken(token, priKey);
             dataInfo = ijwtInfo.getDataInfo();
         } catch (JWTException e) {
+            log.error(e.getMessage(), e);
             if (e.getCode() == JWTConstants.JWT_CODE.ERR_DATA.value) {
                 throw e;
             }

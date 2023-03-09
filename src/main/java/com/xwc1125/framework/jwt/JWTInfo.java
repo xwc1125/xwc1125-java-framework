@@ -1,7 +1,6 @@
 package com.xwc1125.framework.jwt;
 
 import com.xwc1125.common.entity.DataInfo;
-
 import java.io.Serializable;
 
 /**
@@ -17,7 +16,7 @@ public class JWTInfo implements Serializable, IJWTInfo {
     private String jwtId;
     private String userId;
     private String userName;
-    private DataInfo dataInfo;
+    private DataInfo dataInfo = new DataInfo();
 
     public JWTInfo() {
     }
