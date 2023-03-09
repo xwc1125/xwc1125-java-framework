@@ -1,6 +1,7 @@
 package com.xwc1125.framework.base;
 
 import com.xwc1125.common.constant.ClientOsType;
+import com.xwc1125.common.crypto.sign.SignalUtils;
 import com.xwc1125.common.entity.AppInfo;
 import com.xwc1125.common.entity.DataInfo;
 import com.xwc1125.common.entity.PhoneInfo;
@@ -9,7 +10,6 @@ import com.xwc1125.common.entity.response.ResponseInfo;
 import com.xwc1125.common.util.http.HttpUtils;
 import com.xwc1125.common.util.json.JsonUtils;
 import com.xwc1125.common.util.servlet.ServletUtils;
-import com.xwc1125.common.crypto.sign.SignalUtils;
 import com.xwc1125.common.util.string.StringUtils;
 import com.xwc1125.framework.autoconfigure.jwt.JwtProperties;
 import com.xwc1125.framework.autoconfigure.redis.service.RedisHelper;
@@ -17,17 +17,16 @@ import com.xwc1125.framework.jwt.IJWTInfo;
 import com.xwc1125.framework.jwt.JWTException;
 import com.xwc1125.framework.jwt.JWTHelper;
 import com.xwc1125.framework.protocol.constants.AttributeConstants;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * @author xwc1125
@@ -84,7 +83,7 @@ public class BaseEngine {
      * @date 2017年2月7日 上午11:48:38
      */
     private boolean backJsonp(HttpServletResponse response, String jsonpCallback,
-                              Map<String, Object> map, String clientSecret, String clientId) throws IOException {
+            Map<String, Object> map, String clientSecret, String clientId) throws IOException {
         // 是否使用jsonp返回数据
         if (StringUtils.isNotEmpty(jsonpCallback)) {
             Map<String, Object> map2 = map;
@@ -123,7 +122,7 @@ public class BaseEngine {
      * @date 2016年11月21日 下午6:05:42
      */
     private void backRedirect(HttpServletResponse response, String redirectUrl,
-                              Map<String, Object> map, String md5key) throws IOException {
+            Map<String, Object> map, String md5key) throws IOException {
         if (StringUtils.isNotEmpty(redirectUrl)) {
             Map<String, Object> map2 = map;
             String sign = SignalUtils.sign(redirectUrl, map2, md5key);// 提供的回调地址+“？”+密钥进行加密
@@ -169,8 +168,8 @@ public class BaseEngine {
     }
 
     /**
-     * @param @param  appInfo
-     * @param @param  str需要被加密返回的数据
+     * @param @param appInfo
+     * @param @param str需要被加密返回的数据
      * @param @return
      * @param @throws Exception
      * @return ResponseInfo
@@ -238,7 +237,7 @@ public class BaseEngine {
     }
 
     /**
-     * @param @param  phoneInfo3
+     * @param @param phoneInfo3
      * @param @return
      * @return boolean
      * @Title isVituralDevice
@@ -285,7 +284,7 @@ public class BaseEngine {
     public String getUserUuid(RequestDataObj dataObj) throws JWTException {
         String token = ServletUtils.getRequest().getHeader(jwtProperties.getTokenHeader());
         IJWTInfo jwtInfo = null;
-        jwtInfo = JWTHelper.getJwtInfo(token, dataObj, jwtProperties.getRsaSecret());
+        jwtInfo = JWTHelper.parseToken(token, dataObj, jwtProperties.getRsaSecret());
         return jwtInfo.getUserId();
     }
 
@@ -296,7 +295,8 @@ public class BaseEngine {
      * @return
      */
     public String getUpdateBy(RequestDataObj dataObj, String userUuid) {
-        String updateBy = dataObj.getClient().getClientId() + "_" + userUuid + "_" + dataObj.getOsType().msg + "_" + dataObj.getApp().getPk();
+        String updateBy = dataObj.getClient().getClientId() + "_" + userUuid + "_" + dataObj.getOsType().msg + "_"
+                + dataObj.getApp().getPk();
         return updateBy;
     }
 
